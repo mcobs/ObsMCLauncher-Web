@@ -1,0 +1,138 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 主题令牌 */
+:root {
+  /* 亮色 */
+  --bg: #fafafa;
+  --bg-elevated: #ffffff;
+  --bg-subtle: #f4f4f5;
+  --border: #e7e7eb;
+  --text: #0a0a0a;
+  --text-muted: #52525b;
+  --text-faint: #9ca3a8;
+  --accent: #059669;
+  --accent-hover: #047857;
+  --accent-soft: rgba(16, 185, 129, 0.10);
+  --accent-glow: rgba(16, 185, 129, 0.18);
+  --shadow-color: 220 20% 10%;
+  color-scheme: light;
+}
+
+[data-theme="dark"] {
+  /* 暗色 - 黑曜石深黑 */
+  --bg: #08080a;
+  --bg-elevated: #131316;
+  --bg-subtle: #1c1c20;
+  --border: #27272a;
+  --text: #fafafa;
+  --text-muted: #a1a1aa;
+  --text-faint: #6b6b73;
+  --accent: #34d399;
+  --accent-hover: #10b981;
+  --accent-soft: rgba(52, 211, 153, 0.12);
+  --accent-glow: rgba(52, 211, 153, 0.28);
+  --shadow-color: 220 60% 2%;
+  color-scheme: dark;
+}
+
+* {
+  border-color: var(--border);
+}
+
+html {
+  font-family: "PingFang SC", "HarmonyOS Sans SC", "Noto Sans SC", "Microsoft YaHei", system-ui, sans-serif;
+  line-height: 1.6;
+  font-weight: 400;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--text);
+  margin: 0;
+  min-height: 100vh;
+  transition: background-color 0.4s ease, color 0.4s ease;
+}
+
+/* 主题切换过渡 - 应用到所有颜色相关属性 */
+.theme-transition,
+.theme-transition * {
+  transition: background-color 0.4s ease, border-color 0.4s ease, color 0.4s ease, fill 0.4s ease, stroke 0.4s ease !important;
+}
+
+::selection {
+  background: var(--accent-soft);
+  color: var(--text);
+}
+
+/* 自定义滚动条 */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 5px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-faint);
+}
+
+/* 文字渐变 */
+.text-gradient {
+  background: linear-gradient(135deg, var(--text) 0%, var(--accent) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
+/* 玻璃质感 */
+.glass {
+  background: color-mix(in srgb, var(--bg-elevated) 70%, transparent);
+  backdrop-filter: saturate(180%) blur(16px);
+  -webkit-backdrop-filter: saturate(180%) blur(16px);
+}
+
+/* 主按钮渐变 */
+.btn-primary-gradient {
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 100%);
+  box-shadow: 0 4px 14px 0 var(--accent-glow);
+}
+.btn-primary-gradient:hover {
+  box-shadow: 0 6px 22px 0 var(--accent-glow);
+  transform: translateY(-1px);
+}
+
+/* 网格背景 */
+.bg-grid {
+  background-image: linear-gradient(to right, var(--border) 1px, transparent 1px),
+                    linear-gradient(to bottom, var(--border) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(ellipse at center, black 30%, transparent 75%);
+  -webkit-mask-image: radial-gradient(ellipse at center, black 30%, transparent 75%);
+}
+
+/* 光晕背景 */
+.glow-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.4;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* 截图交叉淡入 */
+.screenshot-fade {
+  transition: opacity 0.4s ease;
+}
