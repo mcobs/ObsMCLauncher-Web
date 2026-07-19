@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Download as DownloadIcon, ExternalLink, RefreshCw, AlertCircle, Loader2, CheckCircle2,
-  ChevronRight, Calendar, Tag, Github, Zap
+  ChevronRight, Calendar, Tag, Github, Zap, Cpu
 } from 'lucide-react';
 import {
   CHANNELS, PLATFORM_META, DEFAULT_ARCH, applyMirror, formatFileSize,
@@ -380,6 +380,45 @@ export default function Download() {
                 useMirror={useMirror}
               />
             ))}
+          </div>
+
+          {/* .NET 8 运行时提示 */}
+          <div className="mt-10 max-w-4xl mx-auto">
+            <div className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-6">
+              <div className="flex items-start gap-4">
+                <div className="shrink-0 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/15 text-amber-500">
+                  <Cpu size={20} />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-display text-base font-semibold text-text">需要 .NET 8 桌面运行时</h3>
+                  <p className="mt-1.5 text-sm text-text-muted leading-relaxed">
+                    ObsMCLauncher 基于 .NET 8 构建，运行前需确保系统已安装 <strong>.NET 8 Desktop Runtime</strong>。
+                    如果启动时提示缺少运行时，请下载安装对应平台的运行时。
+                  </p>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <a
+                      href="https://dotnet.microsoft.com/download/dotnet/8.0/runtime/desktop"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-bg-elevated px-3.5 py-2 text-xs font-medium text-text-muted transition-colors hover:text-accent hover:border-accent/40"
+                    >
+                      <DownloadIcon size={12} />
+                      .NET 8 Desktop Runtime
+                      <ExternalLink size={10} />
+                    </a>
+                    <a
+                      href="https://docs.microsoft.com/en-us/dotnet/core/install/"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-bg-elevated px-3.5 py-2 text-xs font-medium text-text-muted transition-colors hover:text-accent hover:border-accent/40"
+                    >
+                      安装指南
+                      <ExternalLink size={10} />
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* 底部链接区 */}
