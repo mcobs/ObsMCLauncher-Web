@@ -9,6 +9,8 @@ import {
 import SectionTitle from '@/components/SectionTitle';
 import FeatureCard from '@/components/FeatureCard';
 import ThemeImage from '@/components/ThemeImage';
+import { useLatestRelease } from '@/hooks/useReleases';
+import { formatVersion } from '@/utils/releases';
 
 const REPO_URL = 'https://github.com/mcobs/ObsMCLauncher';
 
@@ -47,6 +49,7 @@ const RESOURCE_FEATURES = [
 function Hero() {
   const containerRef = useRef<HTMLElement>(null);
   const [mousePos, setMousePos] = useState({ x: 0.5, y: 0.5 });
+  const { release } = useLatestRelease('stable');
 
   useEffect(() => {
     const el = containerRef.current;
@@ -150,7 +153,11 @@ function Hero() {
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent opacity-60" />
               <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-accent" />
             </span>
-            最新版本 v1.0.0-rc.5 现已发布
+            {release ? (
+              <>最新版本 v{formatVersion(release.tag_name)} 现已发布</>
+            ) : (
+              <>查看最新版本</>
+            )}
           </div>
         </motion.div>
 
