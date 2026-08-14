@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import type { GithubRelease, Channel } from '@/utils/releases';
-import { pickLatestByChannel } from '@/utils/releases';
+import { pickLatest, pickLatestByChannel } from '@/utils/releases';
 
 const REPO = 'mcobs/ObsMCLauncher';
 const ENDPOINT = `https://api.github.com/repos/${REPO}/releases?per_page=100`;
@@ -78,12 +78,12 @@ export function useReleases(): UseReleasesResult {
   return { releases, loading, error, refresh: fetchReleases };
 }
 
-export function useLatestRelease(channel: Channel): {
+export function useLatestRelease(channel: Channel | 'latest'): {
   release: GithubRelease | null;
   loading: boolean;
   error: string | null;
 } {
   const { releases, loading, error } = useReleases();
-  const release = pickLatestByChannel(releases, channel);
+  const release = channel === 'latest' ? pickLatest(releases) : pickLatestByChannel(releases, channel);
   return { release, loading, error };
 }

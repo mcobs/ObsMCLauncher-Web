@@ -49,7 +49,7 @@ const RESOURCE_FEATURES = [
 function Hero() {
   const containerRef = useRef<HTMLElement>(null);
   const [mousePos, setMousePos] = useState({ x: 0.5, y: 0.5 });
-  const { release } = useLatestRelease('stable');
+  const { release } = useLatestRelease('latest');
 
   useEffect(() => {
     const el = containerRef.current;

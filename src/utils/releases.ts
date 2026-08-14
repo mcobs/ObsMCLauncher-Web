@@ -77,6 +77,14 @@ export function pickLatestByChannel(releases: GithubRelease[], channel: Channel)
   return filtered[0];
 }
 
+// 最新发布的版本，不区分通道
+export function pickLatest(releases: GithubRelease[]): GithubRelease | null {
+  if (releases.length === 0) return null;
+  return [...releases].sort(
+    (a, b) => new Date(b.published_at).getTime() - new Date(a.published_at).getTime()
+  )[0];
+}
+
 const PLATFORM_PATTERNS: Record<Platform, RegExp[]> = {
   windows: [/(-|_)win-x64\.zip$/i, /(-|_)win-x86\.zip$/i, /(-|_)win-arm64\.zip$/i],
   linux: [/(-|_)linux-x64\.(AppImage|zip)$/i, /(-|_)linux-arm64\.(AppImage|zip)$/i],

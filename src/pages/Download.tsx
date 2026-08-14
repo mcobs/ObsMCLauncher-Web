@@ -2,13 +2,15 @@ import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Download as DownloadIcon, ExternalLink, RefreshCw, AlertCircle, Loader2, CheckCircle2,
-  ChevronRight, Calendar, Tag, Github, Zap, Cpu
+  ChevronRight, Calendar, Tag, Github, Zap, Cpu, PlusCircle, Wrench, Trash2, Sparkles, Gauge, ShieldCheck
 } from 'lucide-react';
 import {
   CHANNELS, PLATFORM_META, DEFAULT_ARCH, applyMirror, formatFileSize,
   formatDate, formatVersion, pickAllAssets, extractArch, type Channel, type Platform,
 } from '@/utils/releases';
 import { useReleases, useLatestRelease } from '@/hooks/useReleases';
+import { useChangelog } from '@/hooks/useChangelog';
+import { findChangelog } from '@/utils/changelog';
 
 const REPO_URL = 'https://github.com/mcobs/ObsMCLauncher';
 
@@ -173,7 +175,98 @@ function VersionInfoCard({
           <p className="text-sm leading-relaxed text-text-muted">{meta.description}</p>
         </div>
       </div>
+
+      <ChangelogPanel release={release} />
     </motion.div>
+  );
+}
+
+// 更新日志分类的颜色与图标
+const SECTION_META: Record<string, { color: string; icon: typeof Zap }> = {
+  新增: { color: '#10b981', icon: PlusCircle },
+  修复: { color: '#3b82f6', icon: Wrench },
+  优化: { color: '#a855f7', icon: Zap },
+  移除: { color: '#6b7280', icon: Trash2 },
+  性能: { color: '#f59e0b', icon: Gauge },
+  安全: { color: '#ef4444', icon: ShieldCheck },
+};
+const DEFAULT_SECTION_META = { color: '#64748b', icon: Sparkles };
+
+function ChangelogPanel({ release }: { release: { tag_name: string } | null }) {
+  const { versions, loading } = useChangelog();
+  const [expanded, setExpanded] = useState(false);
+
+  if (!release) return null;
+
+  const entry = findChangelog(versions, release.tag_name);
+
+  if (loading) {
+    return (
+      <div className="relative mt-6 border-t border-border pt-5">
+        <div className="flex items-center gap-2 text-xs text-text-muted">
+          <Loader2 size={13} className="animate-spin" />
+          正在加载更新日志…
+        </div>
+      </div>
+    );
+  }
+
+  if (!entry || entry.sections.length === 0) return null;
+
+  const totalItems = entry.sections.reduce((n, s) => n + s.items.length, 0);
+  const showAll = expanded || totalItems <= 8;
+
+  return (
+    <div className="relative mt-6 border-t border-border pt-5">
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <h4 className="flex items-center gap-1.5 text-sm font-semibold text-text">
+          <Sparkles size={14} className="text-accent" />
+          更新说明
+        </h4>
+      </div>
+
+      <div className="space-y-4">
+        {entry.sections.map(section => {
+          const meta = SECTION_META[section.title] ?? DEFAULT_SECTION_META;
+          const Icon = meta.icon;
+          const items = showAll ? section.items : section.items.slice(0, 3);
+          return (
+            <div key={section.title}>
+              <div
+                className="mb-1.5 flex items-center gap-1.5 text-xs font-medium"
+                style={{ color: meta.color }}
+              >
+                <Icon size={12} />
+                {section.title}
+                <span className="font-normal text-text-faint">({section.items.length})</span>
+              </div>
+              <ul className="space-y-1">
+                {items.map((item, i) => (
+                  <li
+                    key={i}
+                    className="flex gap-1.5 text-xs leading-relaxed text-text-muted"
+                  >
+                    <span className="mt-[5px] h-1 w-1 shrink-0 rounded-full bg-current opacity-50" />
+                    <span className="min-w-0">{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          );
+        })}
+      </div>
+
+      {totalItems > 8 && (
+        <button
+          type="button"
+          onClick={() => setExpanded(v => !v)}
+          className="mt-3 inline-flex items-center gap-1 text-xs text-accent transition-colors hover:text-accent/80"
+        >
+          {expanded ? '收起更新说明' : `展开全部 ${totalItems} 条更新`}
+          <ChevronRight size={12} className={`transition-transform ${expanded ? 'rotate-90' : ''}`} />
+        </button>
+      )}
+    </div>
   );
 }
 
