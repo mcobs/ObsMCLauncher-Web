@@ -49,9 +49,7 @@ export default function Footer() {
                 </a>
               </li>
               <li>
-                <a href={`${REPO_URL}/blob/main/Plugin-Development.md`} target="_blank" rel="noreferrer" className="text-text-muted hover:text-accent transition-colors">
-                  插件开发指南
-                </a>
+                <Link to="/plugin-api" className="text-text-muted hover:text-accent transition-colors">插件 API 文档</Link>
               </li>
               <li>
                 <a href={`${REPO_URL}/blob/main/LICENSE`} target="_blank" rel="noreferrer" className="text-text-muted hover:text-accent transition-colors">

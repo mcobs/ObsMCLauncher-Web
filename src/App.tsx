@@ -5,6 +5,7 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import Home from '@/pages/Home';
 import Download from '@/pages/Download';
+import PluginAPI from '@/pages/PluginAPI';
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -24,6 +25,7 @@ export default function App() {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/download" element={<Download />} />
+            <Route path="/plugin-api" element={<PluginAPI />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>

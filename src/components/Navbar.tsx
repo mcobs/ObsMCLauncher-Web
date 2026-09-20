@@ -7,6 +7,7 @@ import ThemeToggle from './ThemeToggle';
 const NAV_ITEMS = [
   { to: '/', label: '主页' },
   { to: '/download', label: '下载' },
+  { to: '/plugin-api', label: '插件 API' },
 ];
 
 const REPO_URL = 'https://github.com/mcobs/ObsMCLauncher';
