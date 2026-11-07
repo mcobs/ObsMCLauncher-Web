@@ -10,8 +10,11 @@ export default function Footer() {
         <div className="grid gap-10 md:grid-cols-3">
           <div className="space-y-3">
             <div className="flex items-center gap-2.5">
-              <img src="/logo.svg" alt="ObsMCLauncher" className="h-7 w-7" />
-              <span className="font-display text-base font-semibold text-text">ObsMCLauncher</span>
+              <img src="/logo.svg" alt="黑曜石我的世界启动器 ObsMCLauncher" className="h-7 w-7" />
+              <div className="leading-tight">
+                <div className="font-display text-base font-semibold text-text">ObsMCLauncher</div>
+                <div className="text-xs text-text-faint">黑曜石我的世界启动器</div>
+              </div>
             </div>
             <p className="text-sm leading-relaxed text-text-muted max-w-xs">
               一款功能强、可定制、跨平台的 Minecraft 启动器。基于 .NET 8 与 Avalonia 构建。
@@ -62,7 +65,7 @@ export default function Footer() {
 
         <div className="mt-10 pt-6 border-t border-border flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <p className="text-xs text-text-faint">
-            © 2026 ObsMCLauncher · 采用 GPL-3.0 许可证开源
+            © 2026 黑曜石我的世界启动器（ObsMCLauncher） · 采用 GPL-3.0 许可证开源
           </p>
           <p className="text-xs text-text-faint max-w-xl md:text-right">
             本启动器为第三方工具，与 Mojang Studios 和 Microsoft 无关。Minecraft 是 Mojang Studios 的注册商标。
