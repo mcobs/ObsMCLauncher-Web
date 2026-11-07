@@ -2,13 +2,16 @@ import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Download as DownloadIcon, ExternalLink, RefreshCw, AlertCircle, Loader2, CheckCircle2,
-  ChevronRight, Calendar, Tag, Github, Zap, Cpu, PlusCircle, Wrench, Trash2, Sparkles, Gauge, ShieldCheck
+  ChevronRight, Calendar, Tag, Github, Zap, Cpu, PlusCircle, Wrench, Trash2, Sparkles, Gauge, ShieldCheck,
+  MonitorCheck,
 } from 'lucide-react';
 import {
-  CHANNELS, PLATFORM_META, DEFAULT_ARCH, applyMirror, formatFileSize,
-  formatDate, formatVersion, pickAllAssets, extractArch, type Channel, type Platform,
+  CHANNELS, PLATFORM_META, DEFAULT_ARCH, ASSET_KINDS, applyMirror, formatFileSize,
+  formatDate, formatVersion, pickAllAssets, pickDownloads, extractArch, assetTypeLabel,
+  type AssetKind, type Channel, type Platform,
 } from '@/utils/releases';
-import { useReleases, useLatestRelease } from '@/hooks/useReleases';
+import { useLatestRelease } from '@/hooks/useReleases';
+import { useDetectedSystem, type DetectedSystem } from '@/hooks/useDetectedSystem';
 import { useChangelog } from '@/hooks/useChangelog';
 import { findChangelog } from '@/utils/changelog';
 
@@ -270,34 +273,49 @@ function ChangelogPanel({ release }: { release: { tag_name: string } | null }) {
   );
 }
 
+// 两类产物的定位：安装程序是主推路径，便携包是「不想装进系统」时的备选
+const DOWNLOAD_KIND_META: Record<AssetKind, { label: string; hint: string }> = {
+  installer: { label: '安装程序', hint: '带安装向导' },
+  portable: { label: '便携包', hint: '免安装' },
+};
+
 function PlatformDownloadCard({
   platform,
   release,
   useMirror,
+  detected,
 }: {
   platform: Platform;
   release: ReturnType<typeof useLatestRelease>['release'];
   useMirror: boolean;
+  detected: DetectedSystem;
 }) {
   const meta = PLATFORM_META[platform];
-  const allAssets = release ? pickAllAssets(release, platform) : [];
-  const defaultArch = DEFAULT_ARCH[platform];
+  const isCurrent = detected.platform === platform;
 
-  // 按默认架构优先排列
-  const sorted = [...allAssets].sort((a, b) => {
-    const aArch = extractArch(a.name);
-    const bArch = extractArch(b.name);
-    if (aArch === defaultArch) return -1;
-    if (bArch === defaultArch) return 1;
-    return 0;
-  });
+  // 资产里确实存在当前系统的架构时才认它，否则退回平台推荐架构（例如 ARM64 用户碰上只发了 x64）
+  const platformAssets = release ? pickAllAssets(release, platform) : [];
+  const hasDetectedArch =
+    isCurrent &&
+    detected.archConfident &&
+    platformAssets.some(a => extractArch(a.name) === detected.arch);
+
+  const preferredArch = hasDetectedArch ? detected.arch : DEFAULT_ARCH[platform];
+  const downloads = release
+    ? pickDownloads(release, platform, preferredArch)
+    : { installer: [], portable: [] };
+  const isEmpty = downloads.installer.length === 0 && downloads.portable.length === 0;
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 18 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className="group relative flex flex-col overflow-hidden rounded-2xl border border-border bg-bg-elevated p-7 shadow-soft transition-colors hover:border-accent/40"
+      className={`group relative flex flex-col overflow-hidden rounded-2xl border bg-bg-elevated p-7 shadow-soft transition-colors ${
+        isCurrent
+          ? 'border-accent/50 ring-1 ring-accent/15'
+          : 'border-border hover:border-accent/40'
+      }`}
     >
       <div className="absolute -right-8 -top-8 h-28 w-28 rounded-full bg-accent-soft blur-2xl opacity-0 transition-opacity group-hover:opacity-100" />
 
@@ -306,49 +324,89 @@ function PlatformDownloadCard({
           <PlatformIcon platform={platform} size={26} />
         </div>
         <div>
-          <h3 className="font-display text-xl font-semibold text-text">{meta.name}</h3>
+          <div className="flex items-center gap-2">
+            <h3 className="font-display text-xl font-semibold text-text">{meta.name}</h3>
+            {isCurrent && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-accent px-2 py-0.5 text-[10px] font-medium text-white">
+                <MonitorCheck size={10} />
+                当前系统
+              </span>
+            )}
+          </div>
           <p className="text-xs text-text-faint">{meta.requirements}</p>
         </div>
       </div>
 
-      <div className="relative flex-1 space-y-3">
-        {sorted.length > 0 ? (
-          sorted.map(asset => {
-            const arch = extractArch(asset.name);
-            const isDefault = arch === defaultArch;
-            const ext = asset.name.split('.').slice(-1)[0].toUpperCase();
-            return (
-              <div key={asset.name} className="flex items-center gap-3">
-                <div className={`shrink-0 rounded-md px-2 py-0.5 font-mono text-xs font-medium ${
-                  isDefault
-                    ? 'bg-accent-soft text-accent ring-1 ring-accent/20'
-                    : 'bg-bg-subtle text-text-muted'
-                }`}>
-                  {arch}
-                  {isDefault && <span className="ml-1 text-[10px] opacity-70">推荐</span>}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <a
-                    href={applyMirror(asset.browser_download_url, useMirror)}
-                    className="group/btn inline-flex w-full items-center justify-between rounded-lg border border-border bg-bg-subtle/60 px-3 py-2 text-xs transition-colors hover:border-accent/50 hover:bg-accent-soft/20"
-                  >
-                    <span className="flex items-center gap-1.5">
-                      <DownloadIcon size={11} className="text-text-faint group-hover/btn:text-accent" />
-                      <span className="font-medium text-text group-hover/btn:text-accent">
-                        {ext} {arch}
-                      </span>
-                      {useMirror && <Zap size={10} className="text-accent/60" />}
-                    </span>
-                    <span className="font-mono text-text-faint">{formatFileSize(asset.size)}</span>
-                  </a>
-                </div>
-              </div>
-            );
-          })
-        ) : (
+      <div className="relative flex-1 space-y-4">
+        {isEmpty ? (
           <div className="rounded-xl border border-dashed border-border px-5 py-4 text-center text-sm text-text-muted">
             该通道暂无 {meta.name} 下载
           </div>
+        ) : (
+          ASSET_KINDS.map(kind => {
+            const list = downloads[kind];
+            if (list.length === 0) return null;
+
+            const kindMeta = DOWNLOAD_KIND_META[kind];
+            const isPrimary = kind === 'installer';
+
+            return (
+              <div key={kind} className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className={`text-[11px] font-medium ${isPrimary ? 'text-accent' : 'text-text-muted'}`}>
+                    {kindMeta.label}
+                  </span>
+                  <span className="h-px flex-1 bg-border" />
+                  <span className="text-[10px] text-text-faint">{kindMeta.hint}</span>
+                </div>
+
+                {list.map(asset => {
+                  const arch = extractArch(asset.name);
+                  const isPreferred = arch === preferredArch;
+                  return (
+                    <a
+                      key={asset.name}
+                      href={applyMirror(asset.browser_download_url, useMirror)}
+                      title={asset.name}
+                      className={`group/btn flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors ${
+                        isPrimary
+                          ? `border bg-accent-soft/40 hover:bg-accent-soft/70 ${
+                              isPreferred && isCurrent ? 'border-accent/60' : 'border-accent/30 hover:border-accent/60'
+                            }`
+                          : `border bg-bg-subtle/50 ${
+                              isPreferred && isCurrent ? 'border-accent/40' : 'border-border hover:border-accent/40'
+                            }`
+                      }`}
+                    >
+                      <span
+                        className={`shrink-0 rounded-md px-2 py-0.5 font-mono text-xs font-medium ${
+                          isPreferred
+                            ? 'bg-accent text-white'
+                            : 'bg-bg-subtle text-text-muted ring-1 ring-border'
+                        }`}
+                      >
+                        {arch}
+                      </span>
+
+                      <span className={`flex min-w-0 flex-1 items-center gap-1.5 truncate text-xs ${isPrimary ? 'font-semibold text-text' : 'font-medium text-text-muted'}`}>
+                        {assetTypeLabel(asset.name)}
+                        {isPreferred && isPrimary && (
+                          <span className="rounded-full bg-accent/15 px-1.5 py-px text-[10px] font-medium text-accent">
+                            {hasDetectedArch ? '当前系统' : '推荐'}
+                          </span>
+                        )}
+                        {useMirror && <Zap size={10} className="shrink-0 text-accent/60" />}
+                      </span>
+
+                      <span className="shrink-0 font-mono text-[11px] text-text-faint">
+                        {formatFileSize(asset.size)}
+                      </span>
+                    </a>
+                  );
+                })}
+              </div>
+            );
+          })
         )}
       </div>
 
@@ -412,10 +470,31 @@ function MirrorToggle({
   );
 }
 
+function InfoPanel({
+  icon: Icon,
+  title,
+  body,
+}: {
+  icon: typeof Cpu;
+  title: string;
+  body: string;
+}) {
+  return (
+    <div className="rounded-2xl border border-border bg-bg-elevated/60 p-5">
+      <div className="flex items-center gap-2 text-sm font-semibold text-text">
+        <Icon size={15} className="text-accent" />
+        {title}
+      </div>
+      <p className="mt-2 text-xs leading-relaxed text-text-muted">{body}</p>
+    </div>
+  );
+}
+
 export default function Download() {
   const [channel, setChannel] = useState<Channel>('stable');
   const [useMirror, setUseMirror] = useState(false);
   const { release, loading, error } = useLatestRelease(channel);
+  const detected = useDetectedSystem();
 
   const platforms: Platform[] = useMemo(() => ['windows', 'linux', 'macos'], []);
 
@@ -446,6 +525,17 @@ export default function Download() {
             <p className="mt-4 text-base md:text-lg text-text-muted max-w-xl mx-auto">
               所有版本均从 GitHub Release 自动获取，确保你拿到的总是最新且未被篡改的官方构建。
             </p>
+
+            {/* 系统识别提示：下方对应平台卡片会同时高亮 */}
+            <div className="mt-5 flex justify-center">
+              <div className="inline-flex flex-wrap items-center justify-center gap-x-1.5 gap-y-1 rounded-full border border-accent/30 bg-accent-soft/60 px-3.5 py-1.5 text-xs font-medium text-accent">
+                <MonitorCheck size={13} className="shrink-0" />
+                <span>已为你匹配当前系统：{PLATFORM_META[detected.platform].name}</span>
+                {detected.archConfident && (
+                  <span className="font-mono text-[11px] opacity-80">· {detected.arch}</span>
+                )}
+              </div>
+            </div>
           </motion.div>
 
           {/* 通道切换 */}
@@ -471,47 +561,28 @@ export default function Download() {
                 platform={p}
                 release={release}
                 useMirror={useMirror}
+                detected={detected}
               />
             ))}
           </div>
 
-          {/* .NET 8 运行时提示 */}
-          <div className="mt-10 max-w-4xl mx-auto">
-            <div className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-6">
-              <div className="flex items-start gap-4">
-                <div className="shrink-0 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/15 text-amber-500">
-                  <Cpu size={20} />
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-display text-base font-semibold text-text">需要 .NET 8 桌面运行时</h3>
-                  <p className="mt-1.5 text-sm text-text-muted leading-relaxed">
-                    ObsMCLauncher 基于 .NET 8 构建，运行前需确保系统已安装 <strong>.NET 8 Desktop Runtime</strong>。
-                    如果启动时提示缺少运行时，请下载安装对应平台的运行时。
-                  </p>
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    <a
-                      href="https://dotnet.microsoft.com/download/dotnet/8.0/runtime/desktop"
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-bg-elevated px-3.5 py-2 text-xs font-medium text-text-muted transition-colors hover:text-accent hover:border-accent/40"
-                    >
-                      <DownloadIcon size={12} />
-                      .NET 8 Desktop Runtime
-                      <ExternalLink size={10} />
-                    </a>
-                    <a
-                      href="https://docs.microsoft.com/en-us/dotnet/core/install/"
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-bg-elevated px-3.5 py-2 text-xs font-medium text-text-muted transition-colors hover:text-accent hover:border-accent/40"
-                    >
-                      安装指南
-                      <ExternalLink size={10} />
-                    </a>
-                  </div>
-                </div>
-              </div>
-            </div>
+          {/* 安装须知：产物特性与卸载行为，文案与 .github/installer 下的向导页保持一致 */}
+          <div className="mt-6 max-w-5xl mx-auto grid gap-4 md:grid-cols-3">
+            <InfoPanel
+              icon={Cpu}
+              title="无需另装运行时"
+              body="安装程序与便携包都是自包含发布，已内置 .NET 8 运行时，下载后即可运行。"
+            />
+            <InfoPanel
+              icon={ShieldCheck}
+              title="安装包暂未签名"
+              body="Windows 会弹出 SmartScreen 提示，选「更多信息 → 仍要运行」；macOS 首次打开需右键 →「打开」，或在「隐私与安全性」中放行。"
+            />
+            <InfoPanel
+              icon={Trash2}
+              title="卸载前先备份"
+              body="Windows 卸载会删除安装目录，OMCL 配置与「运行目录」模式的存档都在其中；macOS 的数据在 ~/Library/Application Support/ObsMCLauncher，卸载不会删除。"
+            />
           </div>
 
           {/* 底部链接区 */}

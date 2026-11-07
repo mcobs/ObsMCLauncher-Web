@@ -85,11 +85,28 @@ export function pickLatest(releases: GithubRelease[]): GithubRelease | null {
   )[0];
 }
 
+// 资产命名约定（由 release.yml 的「重命名」步骤产生，改动那边要同步这里）：
+//   安装程序  ObsMCLauncher-v1.1.2-win-x64-setup.msi
+//             ObsMCLauncher-v1.1.2-osx-arm64-setup.pkg
+//   便携包    ObsMCLauncher-v1.1.2-win-x64.zip
+//             ObsMCLauncher-v1.1.2-osx-arm64.zip
+//             ObsMCLauncher-v1.1.2-linux-x64.AppImage
+// 注意 `-setup` 是可选段：只认带后缀的会漏掉旧版本，只认不带后缀的会漏掉安装包。
 const PLATFORM_PATTERNS: Record<Platform, RegExp[]> = {
-  windows: [/(-|_)win-x64\.zip$/i, /(-|_)win-x86\.zip$/i, /(-|_)win-arm64\.zip$/i],
-  linux: [/(-|_)linux-x64\.(AppImage|zip)$/i, /(-|_)linux-arm64\.(AppImage|zip)$/i],
-  macos: [/(-|_)osx-arm64\.zip$/i, /(-|_)osx-x64\.zip$/i],
+  windows: [/(?:^|[-_])win-(?:x86|x64|arm64)(?:-setup)?\.(?:msi|zip)$/i],
+  linux: [/(?:^|[-_])linux-(?:x64|arm64)(?:-setup)?\.(?:AppImage|zip)$/i],
+  macos: [/(?:^|[-_])osx-(?:x64|arm64)(?:-setup)?\.(?:pkg|zip)$/i],
 };
+
+/** 资产的发布形态：安装程序（带向导）或便携包（解压即用） */
+export type AssetKind = 'installer' | 'portable';
+
+/** 展示顺序：安装程序在前，便携包作为备选 */
+export const ASSET_KINDS: AssetKind[] = ['installer', 'portable'];
+
+export function classifyAsset(name: string): AssetKind {
+  return /\.(msi|pkg)$/i.test(name) ? 'installer' : 'portable';
+}
 
 // 默认推荐架构
 export const DEFAULT_ARCH: Record<Platform, string> = {
@@ -108,7 +125,7 @@ export const PLATFORM_META: Record<Platform, {
   windows: {
     name: 'Windows',
     osLabel: 'Windows 10 / 11',
-    requirements: 'Windows 10 及更高版本',
+    requirements: 'Windows 10 1809 及更高版本',
     archs: ['x64', 'x86', 'arm64'],
     icon: 'windows',
   },
@@ -128,13 +145,39 @@ export const PLATFORM_META: Record<Platform, {
   },
 };
 
-export function pickAsset(release: GithubRelease, platform: Platform, arch: string): ReleaseAsset | null {
-  const archPattern = new RegExp(`(-|_)${platform === 'windows' ? 'win' : platform === 'linux' ? 'linux' : 'osx'}-${arch}\\.(zip|AppImage)$`, 'i');
-  return release.assets.find(a => archPattern.test(a.name)) ?? null;
-}
-
 export function pickAllAssets(release: GithubRelease, platform: Platform): ReleaseAsset[] {
   return release.assets.filter(a => PLATFORM_PATTERNS[platform].some(p => p.test(a.name)));
+}
+
+/**
+ * 按「安装程序 / 便携包」把某平台的资产分组，并让首选架构排在最前。
+ * 两组的成员数量可能不同（Linux 只有 AppImage，旧版本只有 zip），调用方要能各自缺失。
+ *
+ * @param preferredArch 首选架构，默认取该平台的推荐架构；下载页会传入识别到的当前系统架构
+ */
+export function pickDownloads(
+  release: GithubRelease,
+  platform: Platform,
+  preferredArch: string = DEFAULT_ARCH[platform],
+): Record<AssetKind, ReleaseAsset[]> {
+  const grouped: Record<AssetKind, ReleaseAsset[]> = { installer: [], portable: [] };
+  for (const asset of pickAllAssets(release, platform)) {
+    grouped[classifyAsset(asset.name)].push(asset);
+  }
+
+  for (const list of Object.values(grouped)) {
+    list.sort((a, b) => Number(extractArch(b.name) === preferredArch) - Number(extractArch(a.name) === preferredArch));
+  }
+
+  return grouped;
+}
+
+/** 文件类型标签：msi / pkg / zip / AppImage */
+export function assetTypeLabel(name: string): string {
+  const ext = name.split('.').pop() ?? '';
+  if (/^appimage$/i.test(ext)) return 'AppImage';
+  if (/^pkg$/i.test(ext)) return 'PKG';
+  return ext.toUpperCase();
 }
 
 export function applyMirror(url: string, useMirror: boolean): string {
